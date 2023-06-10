@@ -226,7 +226,7 @@ namespace CriminisiDetectionAlgorithm
                     for (int y = 0; y < blockSize; y++)
                     {
                         if (diffMatrix[x, y] <= lim)
-                            diffMatrix[x, y] = 255;    //(1)
+                            diffMatrix[x, y] = 255;    
                         else
                             diffMatrix[x, y] = 0; ;
                     }
