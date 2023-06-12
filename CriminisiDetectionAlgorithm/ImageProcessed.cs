@@ -12,7 +12,7 @@ namespace CriminisiDetectionAlgorithm
 {
     internal class ImageProcessed
     {
-        public static ImageStructure imageLoaded()
+        public static BlockStructure imageLoaded()
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
             openFileDialog.Filter = "Image Files (*.png)|*.png";
@@ -26,11 +26,11 @@ namespace CriminisiDetectionAlgorithm
                 int width = bitmap.Width;
                 int height = bitmap.Height;
 
-                ImageStructure imageStructure = new ImageStructure()
+                BlockStructure imageStructure = new BlockStructure()
                 {
-                    matR = new byte[height, width],
-                    matG = new byte[height, width],
-                    matB = new byte[height, width]
+                    MatR = new byte[height, width],
+                    MatG = new byte[height, width],
+                    MatB = new byte[height, width]
                 };
 
                 for (int i = 0; i < height; i++)
@@ -38,9 +38,9 @@ namespace CriminisiDetectionAlgorithm
                     for (int j = 0; j < width; j++)
                     {
                         Color color = bitmap.GetPixel(j, i);
-                        imageStructure.matR[i, j] = color.R;
-                        imageStructure.matG[i, j] = color.G;
-                        imageStructure.matB[i, j] = color.B;
+                        imageStructure.MatR[i, j] = color.R;
+                        imageStructure.MatG[i, j] = color.G;
+                        imageStructure.MatB[i, j] = color.B;
                     }
                 }
 

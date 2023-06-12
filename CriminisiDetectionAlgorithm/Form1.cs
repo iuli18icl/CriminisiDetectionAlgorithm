@@ -28,7 +28,7 @@ namespace CriminisiDetectionAlgorithm
 
         public Image image;
 
-        public Image LoadImageFromFile(PictureBox pictureBox)
+        public void LoadImageFromFile(PictureBox pictureBox)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
             openFileDialog.Filter = "Image Files|*.png";
@@ -37,43 +37,116 @@ namespace CriminisiDetectionAlgorithm
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
                 string selectedFile = openFileDialog.FileName;
-                Image image = Image.FromFile(selectedFile);
+                image = Image.FromFile(selectedFile);
 
                 pictureBox.Image = image;
-                return image;
             }
-
-            return null;
         }
 
-        // Lista blocuri din toata imaginea
-        public static List<byte[,]> DivideImageIntoBlocks(byte[,] imageStructure, int blockSize, int stepSize)
+        public static List<BlockStructure> DivideImageIntoBlocks(byte[,,] imageStructure, int blockSize, int stepSize)
         {
             int width = imageStructure.GetLength(1);
             int height = imageStructure.GetLength(0);
 
-            List<byte[,]> IMGblocksList = new List<byte[,]>();
+            List<BlockStructure> blocksList = new List<BlockStructure>();
 
             for (int i = 0; i <= height - blockSize; i += stepSize)
             {
                 for (int j = 0; j <= width - blockSize; j += stepSize)
                 {
-                    byte[,] block = new byte[blockSize, blockSize];
+                    byte[,] blockR = new byte[blockSize, blockSize];
+                    byte[,] blockG = new byte[blockSize, blockSize];
+                    byte[,] blockB = new byte[blockSize, blockSize];
 
                     for (int y = 0; y < blockSize; y++)
                     {
                         for (int x = 0; x < blockSize; x++)
                         {
-                            block[y, x] = imageStructure[i + y, j + x];
+                            blockR[y, x] = imageStructure[i + y, j + x, 0]; // Red channel
+                            blockG[y, x] = imageStructure[i + y, j + x, 1]; // Green channel
+                            blockB[y, x] = imageStructure[i + y, j + x, 2]; // Blue channel
                         }
                     }
 
-                    IMGblocksList.Add(block);
+                    BlockStructure blockStructure = new BlockStructure
+                    {
+                        MatR = blockR,
+                        MatG = blockG,
+                        MatB = blockB,
+                        X = j,
+                        Y = i
+                    };
+
+                    blocksList.Add(blockStructure);
                 }
             }
 
-            return IMGblocksList;
+            return blocksList;
         }
+
+        public static byte[,,] ConvertImageToByteArray(Image image)
+        {
+            Bitmap bitmap = new Bitmap(image);
+            int width = bitmap.Width;
+            int height = bitmap.Height;
+
+            byte[,,] imageArray = new byte[height, width, 3];
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    Color pixelColor = bitmap.GetPixel(x, y);
+                    imageArray[y, x, 0] = pixelColor.R;
+                    imageArray[y, x, 1] = pixelColor.G;
+                    imageArray[y, x, 2] = pixelColor.B;
+                }
+            }
+
+            return imageArray;
+        }
+
+
+        public void Compute_Click(object sender, EventArgs e)
+        {
+
+            if (isRGBChecked)
+            {
+
+                if (image != null)
+                {
+
+                    Bitmap bitmap = new Bitmap(image);
+
+                    int width = bitmap.Width;
+                    int height = bitmap.Height;
+
+
+                    //int blockSize = int.Parse(textBox1.Text);
+                    //int stepSize = int.Parse(textBox2.Text);
+                    //int startX = int.Parse(textBox3.Text);
+                    //int startY = int.Parse(textBox4.Text);
+                    //int rosWidth = int.Parse(textBox5.Text);
+                    //int rosHeight = int.Parse(textBox6.Text);
+                    //int limit = int.Parse(textBox7.Text);
+
+                    int blockSize = 5;
+                    int stepSize = 5;
+
+                    byte[,,] imageArray = ConvertImageToByteArray(image);
+                    List<BlockStructure> blocks = DivideImageIntoBlocks(imageArray, blockSize, stepSize);
+
+                    foreach (BlockStructure elemnt in blocks)
+                    {
+                        Console.WriteLine(elemnt.ToString());
+                    }
+
+                }
+            }
+
+
+        }
+
 
         // lista blocuri din ROS
         public static List<byte[,]> DivideROSIntoBlocks(byte[,] image, int blockSize, int startX, int startY, int rosWidth, int rosHeight, int stepSize)
@@ -218,191 +291,10 @@ namespace CriminisiDetectionAlgorithm
 
         private void loadImage_Click(object sender, EventArgs e)
         {
-            Image image = LoadImageFromFile(pictureBox1);
+             LoadImageFromFile(pictureBox1);
         }
 
-        public void Compute_Click(object sender, EventArgs e)
-        {
-            if (isRGBChecked)
-            {
-                if (image != null)
-                {
-                    Bitmap bitmap = new Bitmap(image);
-
-                    int width = bitmap.Width;
-                    int height = bitmap.Height;
-
-                    byte[,] redMatrix = new byte[width, height];
-                    byte[,] greenMatrix = new byte[width, height];
-                    byte[,] blueMatrix = new byte[width, height];
-
-                    for (int y = 0; y < height; y++)
-                    {
-                        for (int x = 0; x < width; x++)
-                        {
-                            Color pixelColor = bitmap.GetPixel(x, y);
-                            redMatrix[x, y] = pixelColor.R;
-                            greenMatrix[x, y] = pixelColor.G;
-                            blueMatrix[x, y] = pixelColor.B;
-                        }
-                    }
-
-                    int blockSize = int.Parse(textBox1.Text);
-                    int stepSize = int.Parse(textBox2.Text);
-                    int startX = int.Parse(textBox3.Text);
-                    int startY = int.Parse(textBox4.Text);
-                    int rosWidth = int.Parse(textBox5.Text);
-                    int rosHeight = int.Parse(textBox6.Text);
-                    int limit = int.Parse(textBox7.Text);
-                    
-
-                    //Liste blocuri din imagine
-                    List<byte[,]> redBlocksFromIMG = DivideImageIntoBlocks(redMatrix, blockSize, stepSize);
-                    List<byte[,]> greenBlocksFromIMG = DivideImageIntoBlocks(greenMatrix, blockSize, stepSize);
-                    List<byte[,]> blueBlocksFromIMG = DivideImageIntoBlocks(blueMatrix, blockSize, stepSize);
-
-                    //Liste blocuri din ROS
-                    List<byte[,]> redROSBlocks = DivideROSIntoBlocks(redMatrix, blockSize, startX, startY, rosWidth, rosHeight, stepSize);
-                    List<byte[,]> greenROSBlocks = DivideROSIntoBlocks(greenMatrix, blockSize, startX, startY, rosWidth, rosHeight, stepSize);
-                    List<byte[,]> blueROSBlocks = DivideROSIntoBlocks(blueMatrix, blockSize, startX, startY, rosWidth, rosHeight, stepSize);
-
-                    //Liste blocuri din imagine -> to Rectangle
-                    List<Rectangle> redIMGrectangles = ToRectangles(redBlocksFromIMG);
-                    List<Rectangle> greenIMGrectangles = ToRectangles(greenBlocksFromIMG);
-                    List<Rectangle> blueIMGrectangles = ToRectangles(blueBlocksFromIMG);
-
-                    //Liste blocuri din ROS -> to Rectangle
-                    List<Rectangle> redROSrectangles = ToRectangles(redROSBlocks);
-                    List<Rectangle> greenROSrectangles = ToRectangles(greenROSBlocks);
-                    List<Rectangle> blueROSrectangles = ToRectangles(blueROSBlocks);
-
-                    //lista cu listele din ROI (3 liste: R G B)
-                    List<List<Rectangle>> totalListROS = new List<List<Rectangle>>();
-                    totalListROS.Add(redROSrectangles);
-                    totalListROS.Add(greenROSrectangles);
-                    totalListROS.Add(blueROSrectangles);
-
-                    foreach (List<Rectangle> listaROI in totalListROS)
-                    {
-                        if (listaROI == redROSrectangles)
-                        {
-                            if (!AreaOverlapping(listaROI, redIMGrectangles))
-                            {
-                                List<byte[,]> diffListRED = DifferenceList(redROSBlocks, redBlocksFromIMG, blockSize);
-
-                                List<byte[,]> FinalMatrixRED = FinalList(diffListRED, blockSize, limit);
-
-                            }
-                        }
-                        else if (listaROI == greenROSrectangles)
-                        {
-                            if (!AreaOverlapping(listaROI, greenIMGrectangles))
-                            {
-                                List<byte[,]> diffListGREEN = DifferenceList(greenROSBlocks, greenBlocksFromIMG, blockSize);
-
-                                List<byte[,]> FinalMatrixGREEN = FinalList(diffListGREEN, blockSize, limit);
-                            }
-                        }
-
-                        else if (listaROI == blueROSrectangles)
-                        {
-                            if (!AreaOverlapping(listaROI, blueIMGrectangles))
-                            {
-                                List<byte[,]> diffListBLUE = DifferenceList(blueROSBlocks, blueBlocksFromIMG, blockSize);
-
-                                List<byte[,]> FinalMatrixBLUE = FinalList(diffListBLUE, blockSize, limit);
-                            }
-                        }
-                    }
-
-                    if (isANDChecked)
-                    {
-                        //List<byte[,]> FinalResults = new List<byte[,]>();
-
-                        //int listLength = FinalMatrixRED.Count;
-
-                        //for (int i = 0; i < listLength; i++)
-                        //{
-                        //    byte[,] redBlock = FinalMatrixRED[i];
-                        //    byte[,] greenBlock = FinalMatrixGREEN[i];
-                        //    byte[,] blueBlock = FinalMatrixBLUE[i];
-
-                        //    byte[,] finalBlock = new byte[blockSize, blockSize];
-
-                        //    for (int x = 0; x < blockSize; x++)
-                        //    {
-                        //        for (int y = 0; y < blockSize; y++)
-                        //        {
-                        //            finalBlock[x, y] = (byte)(redBlock[x, y] & greenBlock[x, y] & blueBlock[x, y]);
-                        //        }
-                        //    }
-
-                        //    FinalResults.Add(finalBlock);
-                        //}
-
-                        List<byte[,]> FinalResults = new List<byte[,]>();
-
-
-                        int listLength = FinalListRED.Count;
-
-                        int matrixWidth = FinalResults[0].GetLength(1);
-                        int matrixHeight = FinalResults[0].GetLength(0);
-
-                        byte[,,] FinalResultsMatrix = new byte[listLength, matrixHeight, matrixWidth];
-
-                        for (int i = 0; i < listLength; i++)
-                        {
-                            byte[,] redBlock = FinalListRED[i];
-                            byte[,] greenBlock = FinalListGREEN[i];
-                            byte[,] blueBlock = FinalListBLUE[i];
-
-                            for (int x = 0; x < matrixHeight; x++)
-                            {
-                                for (int y = 0; y < matrixWidth; y++)
-                                {
-                                    FinalResultsMatrix[i, x, y] = matrix[x, y];
-                                }
-                            }
-                        }
-                    }
-
-                    //else if (isORChecked)
-                    //{
-                    //    if (isANDChecked)
-                    //    {
-                    //        List<byte[,]> FinalResults = new List<byte[,]>();
-
-                    //        int listLength = FinalMatrixRED.Count;
-
-                    //        for (int i = 0; i < listLength; i++)
-                    //        {
-                    //            byte[,] redBlock = FinalMatrixRED[i];
-                    //            byte[,] greenBlock = FinalMatrixGREEN[i];
-                    //            byte[,] blueBlock = FinalMatrixBLUE[i];
-
-                    //            byte[,] resultBlock = new byte[blockSize, blockSize];
-
-                    //            for (int x = 0; x < blockSize; x++)
-                    //            {
-                    //                for (int y = 0; y < blockSize; y++)
-                    //                {
-                    //                    resultBlock[x, y] = (byte)(redBlock[x, y] | greenBlock[x, y] | blueBlock[x, y]);
-                    //                }
-                    //            }
-
-                    //            FinalResults.Add(resultBlock);
-                    //        }
-                    //    }
-                    //}
-                }
-            }
-
-            //else if (isGrayscaleChecked == true)
-            //{
-            
-            //}
-
-        }
+       
         private void pictureBox2_Click(object sender, EventArgs e)
         {
 
@@ -413,26 +305,6 @@ namespace CriminisiDetectionAlgorithm
             LoadImageFromFile(pictureBox2);
         }
 
-
-       
-
-        //private static int GetMatrixSum(byte[,] matrix)
-        //{
-        //    int height = matrix.GetLength(0);
-        //    int width = matrix.GetLength(1);
-
-        //    int sum = 0;
-
-        //    for (int i = 0; i < height; i++)
-        //    {
-        //        for (int j = 0; j < width; j++)
-        //        {
-        //            sum += matrix[i, j];
-        //        }
-        //    }
-
-        //    return sum;
-        //}
 
         private bool isRGBChecked = false;
 
