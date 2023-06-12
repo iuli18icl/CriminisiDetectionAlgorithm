@@ -10,6 +10,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
+using static Emgu.CV.Structure.MCvMatND;
+using System.Xml.Linq;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Button;
 
@@ -151,9 +153,9 @@ namespace CriminisiDetectionAlgorithm
 
 
         //obtinem diferenta dintre toate blocurile
-        public static List<byte[,]> DifferenceMatrix(List<byte[,]> blocksList1, List<byte[,]> blocksList2, int blockSize)
+        public static List<byte[,]> DifferenceList(List<byte[,]> blocksList1, List<byte[,]> blocksList2, int blockSize)
         {
-            List<byte[,]> differenceMatrix = new List<byte[,]>();
+            List<byte[,]> differenceList = new List<byte[,]>();
 
             foreach (byte[,] block1 in blocksList1)
             {
@@ -170,19 +172,18 @@ namespace CriminisiDetectionAlgorithm
                         }
                     }
 
-                    differenceMatrix.Add(diferenta);
+                    differenceList.Add(diferenta);
 
                 }
             }
 
-            return differenceMatrix;
+            return differenceList;
         }
 
         //binarizam matricile diferenta in functie de prag (=lim)
-        public static List<byte[,]> FinalMatrix(List<byte[,]> differenceMatrix, int blockSize, int limit)
+        public static List<byte[,]> FinalList(List<byte[,]> differenceMatrix, int blockSize, int limit)
         {
-            List<byte[,]> FinalMatrix = new List<byte[,]>();
-
+            List<byte[,]> finalList = new List<byte[,]>();
             foreach (byte[,] diffMatrix in differenceMatrix)
             {
                 byte lim = Convert.ToByte(limit);
@@ -198,10 +199,10 @@ namespace CriminisiDetectionAlgorithm
                     }
                 }
 
-                FinalMatrix.Add(diffMatrix);
+                finalList.Add(diffMatrix);
             }
 
-            return FinalMatrix;
+            return finalList;
         }
 
 
@@ -270,12 +271,6 @@ namespace CriminisiDetectionAlgorithm
                     List<Rectangle> greenIMGrectangles = ToRectangles(greenBlocksFromIMG);
                     List<Rectangle> blueIMGrectangles = ToRectangles(blueBlocksFromIMG);
 
-                    //lista cu listele din IMG totala (3 liste: R G B)
-                    //List<List<Rectangle>> totalListIMG = new List<List<Rectangle>>();
-                    //totalListIMG.Add(redIMGrectangles);
-                    //totalListIMG.Add(greenIMGrectangles);
-                    //totalListIMG.Add(blueIMGrectangles);
-
                     //Liste blocuri din ROS -> to Rectangle
                     List<Rectangle> redROSrectangles = ToRectangles(redROSBlocks);
                     List<Rectangle> greenROSrectangles = ToRectangles(greenROSBlocks);
@@ -293,91 +288,120 @@ namespace CriminisiDetectionAlgorithm
                         {
                             if (!AreaOverlapping(listaROI, redIMGrectangles))
                             {
-                                List<byte[,]> diffMatrixRED = DifferenceMatrix(redROSBlocks, redBlocksFromIMG, blockSize);
+                                List<byte[,]> diffListRED = DifferenceList(redROSBlocks, redBlocksFromIMG, blockSize);
 
-                                List<byte[,]> FinalMatrixRED = FinalMatrix(diffMatrixRED, blockSize, limit);
+                                List<byte[,]> FinalMatrixRED = FinalList(diffListRED, blockSize, limit);
+
                             }
                         }
                         else if (listaROI == greenROSrectangles)
                         {
                             if (!AreaOverlapping(listaROI, greenIMGrectangles))
                             {
-                                List<byte[,]> diffMatrixGREEN = DifferenceMatrix(greenROSBlocks, greenBlocksFromIMG, blockSize);
+                                List<byte[,]> diffListGREEN = DifferenceList(greenROSBlocks, greenBlocksFromIMG, blockSize);
 
-                                List<byte[,]> FinalMatrixGREEN = FinalMatrix(diffMatrixGREEN, blockSize, limit);
+                                List<byte[,]> FinalMatrixGREEN = FinalList(diffListGREEN, blockSize, limit);
                             }
                         }
+
                         else if (listaROI == blueROSrectangles)
                         {
                             if (!AreaOverlapping(listaROI, blueIMGrectangles))
                             {
-                                List<byte[,]> diffMatrixBLUE = DifferenceMatrix(blueROSBlocks, blueBlocksFromIMG, blockSize);
+                                List<byte[,]> diffListBLUE = DifferenceList(blueROSBlocks, blueBlocksFromIMG, blockSize);
 
-                                List<byte[,]> FinalMatrixBLUE = FinalMatrix(diffMatrixBLUE, blockSize, limit);
+                                List<byte[,]> FinalMatrixBLUE = FinalList(diffListBLUE, blockSize, limit);
                             }
                         }
                     }
 
                     if (isANDChecked)
                     {
+                        //List<byte[,]> FinalResults = new List<byte[,]>();
+
+                        //int listLength = FinalMatrixRED.Count;
+
+                        //for (int i = 0; i < listLength; i++)
+                        //{
+                        //    byte[,] redBlock = FinalMatrixRED[i];
+                        //    byte[,] greenBlock = FinalMatrixGREEN[i];
+                        //    byte[,] blueBlock = FinalMatrixBLUE[i];
+
+                        //    byte[,] finalBlock = new byte[blockSize, blockSize];
+
+                        //    for (int x = 0; x < blockSize; x++)
+                        //    {
+                        //        for (int y = 0; y < blockSize; y++)
+                        //        {
+                        //            finalBlock[x, y] = (byte)(redBlock[x, y] & greenBlock[x, y] & blueBlock[x, y]);
+                        //        }
+                        //    }
+
+                        //    FinalResults.Add(finalBlock);
+                        //}
+
                         List<byte[,]> FinalResults = new List<byte[,]>();
 
-                        int listLength = FinalMatrixRED.Count;
+
+                        int listLength = FinalListRED.Count;
+
+                        int matrixWidth = FinalResults[0].GetLength(1);
+                        int matrixHeight = FinalResults[0].GetLength(0);
+
+                        byte[,,] FinalResultsMatrix = new byte[listLength, matrixHeight, matrixWidth];
 
                         for (int i = 0; i < listLength; i++)
                         {
-                            byte[,] redBlock = FinalMatrixRED[i];
-                            byte[,] greenBlock = FinalMatrixGREEN[i];
-                            byte[,] blueBlock = FinalMatrixBLUE[i];
+                            byte[,] redBlock = FinalListRED[i];
+                            byte[,] greenBlock = FinalListGREEN[i];
+                            byte[,] blueBlock = FinalListBLUE[i];
 
-                            byte[,] finalBlock = new byte[blockSize, blockSize];
-
-                            for (int x = 0; x < blockSize; x++)
+                            for (int x = 0; x < matrixHeight; x++)
                             {
-                                for (int y = 0; y < blockSize; y++)
+                                for (int y = 0; y < matrixWidth; y++)
                                 {
-                                    finalBlock[x, y] = (byte)(redBlock[x, y] & greenBlock[x, y] & blueBlock[x, y]);
+                                    FinalResultsMatrix[i, x, y] = matrix[x, y];
                                 }
-                            }
-
-                            FinalResults.Add(finalBlock);
-                        }
-                    }
-                    else if (isORChecked)
-                    {
-                        if (isANDChecked)
-                        {
-                            List<byte[,]> FinalResults = new List<byte[,]>();
-
-                            int listLength = FinalMatrixRED.Count;
-
-                            for (int i = 0; i < listLength; i++)
-                            {
-                                byte[,] redBlock = FinalMatrixRED[i];
-                                byte[,] greenBlock = FinalMatrixGREEN[i];
-                                byte[,] blueBlock = FinalMatrixBLUE[i];
-
-                                byte[,] resultBlock = new byte[blockSize, blockSize];
-
-                                for (int x = 0; x < blockSize; x++)
-                                {
-                                    for (int y = 0; y < blockSize; y++)
-                                    {
-                                        resultBlock[x, y] = (byte)(redBlock[x, y] | greenBlock[x, y] | blueBlock[x, y]);
-                                    }
-                                }
-
-                                FinalResults.Add(resultBlock);
                             }
                         }
                     }
+
+                    //else if (isORChecked)
+                    //{
+                    //    if (isANDChecked)
+                    //    {
+                    //        List<byte[,]> FinalResults = new List<byte[,]>();
+
+                    //        int listLength = FinalMatrixRED.Count;
+
+                    //        for (int i = 0; i < listLength; i++)
+                    //        {
+                    //            byte[,] redBlock = FinalMatrixRED[i];
+                    //            byte[,] greenBlock = FinalMatrixGREEN[i];
+                    //            byte[,] blueBlock = FinalMatrixBLUE[i];
+
+                    //            byte[,] resultBlock = new byte[blockSize, blockSize];
+
+                    //            for (int x = 0; x < blockSize; x++)
+                    //            {
+                    //                for (int y = 0; y < blockSize; y++)
+                    //                {
+                    //                    resultBlock[x, y] = (byte)(redBlock[x, y] | greenBlock[x, y] | blueBlock[x, y]);
+                    //                }
+                    //            }
+
+                    //            FinalResults.Add(resultBlock);
+                    //        }
+                    //    }
+                    //}
                 }
             }
 
             //else if (isGrayscaleChecked == true)
             //{
-
+            
             //}
+
         }
         private void pictureBox2_Click(object sender, EventArgs e)
         {
