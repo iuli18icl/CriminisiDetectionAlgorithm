@@ -106,6 +106,66 @@ namespace CriminisiDetectionAlgorithm
             return imageArray;
         }
 
+        // lista blocuri din ROS
+        public static List<BlockStructure> DivideROSIntoBlocks(byte[,,] image, int blockSize, int startX, int startY, int rosWidth, int rosHeight, int stepSize)
+        {
+            List<BlockStructure> ROSblocksList = new List<BlockStructure>();
+
+            int width = image.GetLength(1);
+            int height = image.GetLength(0);
+
+            rosWidth = Math.Min(rosWidth, width - startX);
+            rosHeight = Math.Min(rosHeight, height - startY);
+
+            int endX = startX + rosWidth;
+            int endY = startY + rosHeight;
+
+            for (int i = startX; i <= endX - blockSize; i += stepSize)
+            {
+                for (int j = startY; j <= endY - blockSize; j += stepSize)
+                {
+                    byte[,] blockR = new byte[blockSize, blockSize];
+                    byte[,] blockG = new byte[blockSize, blockSize];
+                    byte[,] blockB = new byte[blockSize, blockSize];
+
+                    for (int x = 0; x < blockSize; x++)
+                    {
+                        for (int y = 0; y < blockSize; y++)
+                        {
+                            blockR[x, y] = image[i + x, j + y, 0]; // Red channel
+                            blockG[x, y] = image[i + x, j + y, 1]; // Green channel
+                            blockB[x, y] = image[i + x, j + y, 2]; // Blue channel
+                        }
+                    }
+
+                    BlockStructure blockStructure = new BlockStructure
+                    {
+                        MatR = blockR,
+                        MatG = blockG,
+                        MatB = blockB,
+                        X = j,
+                        Y = i
+                    };
+
+                    ROSblocksList.Add(blockStructure);
+                }
+            }
+
+            return ROSblocksList;
+        }
+
+        public static List<byte[,]> BlockStructuresToBytes(List<BlockStructure> blockStructures)
+        {
+            List<byte[,]> bytes = new List<byte[,]>();
+
+            foreach (BlockStructure blockStructure in blockStructures)
+            {
+                bytes.Add(blockStructure.MatR);
+            }
+
+            return bytes;
+        }
+
 
         public void Compute_Click(object sender, EventArgs e)
         {
@@ -132,92 +192,63 @@ namespace CriminisiDetectionAlgorithm
 
                     int blockSize = 5;
                     int stepSize = 5;
+                    int startX = 100;
+                    int startY = 200;
+                    int rosWidth = width / 2;
+                    int rosHeight = height / 2;
+
+                    //Rectangle first = new Rectangle(1, 1, 5, 5);
+                    //Rectangle second = new Rectangle(4, 7, 3, 3);
+                    //bool rez = CheckOverlap(first, second);
+                    //Console.WriteLine(rez);
+
 
                     byte[,,] imageArray = ConvertImageToByteArray(image);
-                    List<BlockStructure> blocks = DivideImageIntoBlocks(imageArray, blockSize, stepSize);
 
-                    foreach (BlockStructure elemnt in blocks)
+                    List<BlockStructure> imageBlocks = DivideImageIntoBlocks(imageArray, blockSize, stepSize);
+
+                    List<BlockStructure> rosBlocks = DivideROSIntoBlocks(imageArray, blockSize, startX, startY, rosWidth, rosHeight, stepSize);
+
+                    foreach (BlockStructure rosBlock in rosBlocks)
                     {
-                        Console.WriteLine(elemnt.ToString());
-                    }
-
-                }
-            }
-
-
-        }
-
-
-        // lista blocuri din ROS
-        public static List<byte[,]> DivideROSIntoBlocks(byte[,] image, int blockSize, int startX, int startY, int rosWidth, int rosHeight, int stepSize)
-        {
-            List<byte[,]> ROSblocksList = new List<byte[,]>();
-
-            int width = image.GetLength(1);
-            int height = image.GetLength(0);
-
-            rosWidth = Math.Min(rosWidth, width - startX);
-            rosHeight = Math.Min(rosHeight, height - startY);
-
-            int endX = startX + rosHeight;
-            int endY = startY + rosWidth;
-
-
-            for (int i = startX; i <= endX; i = +stepSize)
-            {
-                for (int j = startY; j <= endY; j = +stepSize)
-                {
-                    byte[,] block = new byte[blockSize, blockSize];
-
-                    for (int x = 0; x < blockSize; x++)
-                    {
-                        for (int y = 0; y < blockSize; y++)
+                        foreach (BlockStructure imageBlock in imageBlocks)
                         {
-                            block[x, y] = image[i + x, j + y];
+                            if (!CheckOverlap(BlockToRectangle(rosBlock), BlockToRectangle(imageBlock)))
+                            {
+                                BlockStructure differenceBlock = imageBlock.Subtract(rosBlock);  //differenceBlock.MatR, differenceBlock.MarG, differenceBlock.MarB
+
+                            }
                         }
                     }
 
-                    ROSblocksList.Add(block);
                 }
             }
-
-            return ROSblocksList;
         }
 
+
         //functie pt a transforma din <byte[,]> in <rectangle>
-        public static List<Rectangle> ToRectangles(List<byte[,]> blocks)
+        public static Rectangle BlockToRectangle(BlockStructure block)
         {
-            List<Rectangle> rectanglesList = new List<Rectangle>();
 
-            foreach (byte[,] block in blocks)
-            {
-                int blockWidth = block.GetLength(1);
-                int blockHeight = block.GetLength(0);
-
-                Rectangle rectangle = new Rectangle(0, 0, blockWidth, blockHeight);
-
-                rectanglesList.Add(rectangle);
-            }
-
-            return rectanglesList;
+            return new Rectangle(block.X, block.Y, block.Width, block.Height);
         }
 
 
         // functii pt overlapping
-        public static bool AreaOverlapping(List<Rectangle> rectanglesList1, List<Rectangle> rectanglesList2)
-        {
+        //public static bool AreaOverlapping(List<Rectangle> rectanglesList1, List<Rectangle> rectanglesList2)
+        //{
 
-            foreach (Rectangle rectangleROS in rectanglesList1)
-            {
-                foreach (Rectangle rectangleIMG in rectanglesList2)
-                {
-                    if (CheckOverlap(rectangleROS, rectangleIMG))
-                        return true;
-                }
-            }
+        //    foreach (Rectangle rectangleROS in rectanglesList1)
+        //    {
+        //        foreach (Rectangle rectangleIMG in rectanglesList2)
+        //        {
+        //            if (CheckOverlap(rectangleROS, rectangleIMG))
+        //                return true;
+        //        }
+        //    }
 
-            return false;
-        }
+        //    return false;
+        //}
 
         public static bool CheckOverlap(Rectangle blockA, Rectangle blockB)
         {
