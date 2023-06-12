@@ -291,20 +291,33 @@ namespace CriminisiDetectionAlgorithm
                         {
                             if (!AreaOverlapping(listaROI, redROSrectangles))
                             {
-                                List<byte[,]> diffMatrix = DifferenceMatrix(redROSBlocks, redBlocksFromIMG, blockSize);
+                                List<byte[,]> diffMatrixRED = DifferenceMatrix(redROSBlocks, redBlocksFromIMG, blockSize);
                             }
                         }
-
+                        else if (listaROI == greenROSrectangles)
+                        {
+                            if (!AreaOverlapping(listaROI, greenROSrectangles))
+                            {
+                                List<byte[,]> diffMatrixGREEN = DifferenceMatrix(greenROSBlocks, greenBlocksFromIMG, blockSize);
+                            }
+                        }
+                        else if (listaROI == blueROSrectangles)
+                        {
+                            if (!AreaOverlapping(listaROI, blueROSrectangles))
+                            {
+                                List<byte[,]> diffMatrixBLUE = DifferenceMatrix(blueROSBlocks, blueBlocksFromIMG, blockSize);
+                            }
+                        }
                     }
 
                     foreach (byte[,] matrix in diffMatrix)
                     {
-                        int width = matrix.GetLength(1);
-                        int height = matrix.GetLength(0);
+                        int w = matrix.GetLength(1);
+                        int h = matrix.GetLength(0);
 
-                        for (int y = 0; y < height; y++)
+                        for (int y = 0; y < h; y++)
                         {
-                            for (int x = 0; x < width; x++)
+                            for (int x = 0; x < w; x++)
                             {
                                 byte value = matrix[y, x];
 
