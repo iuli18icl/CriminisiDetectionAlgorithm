@@ -24,7 +24,7 @@ namespace CriminisiDetectionAlgorithm
             InitializeComponent();
         }
 
-        private Image image;
+        public Image image;
 
         public Image LoadImageFromFile(PictureBox pictureBox)
         {
@@ -144,7 +144,7 @@ namespace CriminisiDetectionAlgorithm
             return false;
         }
 
-        private static bool CheckOverlap(Rectangle blockA, Rectangle blockB)
+        public static bool CheckOverlap(Rectangle blockA, Rectangle blockB)
         {
             return blockA.IntersectsWith(blockB);
         }
@@ -179,9 +179,9 @@ namespace CriminisiDetectionAlgorithm
         }
 
         //binarizam matricile diferenta in functie de prag (=lim)
-        public static List<byte[,]> SimilarMatrix(List<byte[,]> differenceMatrix, int blockSize, int limit)
+        public static List<byte[,]> FinalMatrix(List<byte[,]> differenceMatrix, int blockSize, int limit)
         {
-            List<byte[,]> SimilarMatrix = new List<byte[,]>();
+            List<byte[,]> FinalMatrix = new List<byte[,]>();
 
             foreach (byte[,] diffMatrix in differenceMatrix)
             {
@@ -198,10 +198,10 @@ namespace CriminisiDetectionAlgorithm
                     }
                 }
 
-                SimilarMatrix.Add(diffMatrix);
+                FinalMatrix.Add(diffMatrix);
             }
 
-            return SimilarMatrix;
+            return FinalMatrix;
         }
 
 
@@ -252,6 +252,8 @@ namespace CriminisiDetectionAlgorithm
                     int startY = int.Parse(textBox4.Text);
                     int rosWidth = int.Parse(textBox5.Text);
                     int rosHeight = int.Parse(textBox6.Text);
+                    int limit = int.Parse(textBox7.Text);
+                    
 
                     //Liste blocuri din imagine
                     List<byte[,]> redBlocksFromIMG = DivideImageIntoBlocks(redMatrix, blockSize, stepSize);
@@ -289,38 +291,83 @@ namespace CriminisiDetectionAlgorithm
                     {
                         if (listaROI == redROSrectangles)
                         {
-                            if (!AreaOverlapping(listaROI, redROSrectangles))
+                            if (!AreaOverlapping(listaROI, redIMGrectangles))
                             {
                                 List<byte[,]> diffMatrixRED = DifferenceMatrix(redROSBlocks, redBlocksFromIMG, blockSize);
+
+                                List<byte[,]> FinalMatrixRED = FinalMatrix(diffMatrixRED, blockSize, limit);
                             }
                         }
                         else if (listaROI == greenROSrectangles)
                         {
-                            if (!AreaOverlapping(listaROI, greenROSrectangles))
+                            if (!AreaOverlapping(listaROI, greenIMGrectangles))
                             {
                                 List<byte[,]> diffMatrixGREEN = DifferenceMatrix(greenROSBlocks, greenBlocksFromIMG, blockSize);
+
+                                List<byte[,]> FinalMatrixGREEN = FinalMatrix(diffMatrixGREEN, blockSize, limit);
                             }
                         }
                         else if (listaROI == blueROSrectangles)
                         {
-                            if (!AreaOverlapping(listaROI, blueROSrectangles))
+                            if (!AreaOverlapping(listaROI, blueIMGrectangles))
                             {
                                 List<byte[,]> diffMatrixBLUE = DifferenceMatrix(blueROSBlocks, blueBlocksFromIMG, blockSize);
+
+                                List<byte[,]> FinalMatrixBLUE = FinalMatrix(diffMatrixBLUE, blockSize, limit);
                             }
                         }
                     }
 
-                    foreach (byte[,] matrix in diffMatrix)
+                    if (isANDChecked)
                     {
-                        int w = matrix.GetLength(1);
-                        int h = matrix.GetLength(0);
+                        List<byte[,]> FinalResults = new List<byte[,]>();
 
-                        for (int y = 0; y < h; y++)
+                        int listLength = FinalMatrixRED.Count;
+
+                        for (int i = 0; i < listLength; i++)
                         {
-                            for (int x = 0; x < w; x++)
-                            {
-                                byte value = matrix[y, x];
+                            byte[,] redBlock = FinalMatrixRED[i];
+                            byte[,] greenBlock = FinalMatrixGREEN[i];
+                            byte[,] blueBlock = FinalMatrixBLUE[i];
 
+                            byte[,] finalBlock = new byte[blockSize, blockSize];
+
+                            for (int x = 0; x < blockSize; x++)
+                            {
+                                for (int y = 0; y < blockSize; y++)
+                                {
+                                    finalBlock[x, y] = (byte)(redBlock[x, y] & greenBlock[x, y] & blueBlock[x, y]);
+                                }
+                            }
+
+                            FinalResults.Add(finalBlock);
+                        }
+                    }
+                    else if (isORChecked)
+                    {
+                        if (isANDChecked)
+                        {
+                            List<byte[,]> FinalResults = new List<byte[,]>();
+
+                            int listLength = FinalMatrixRED.Count;
+
+                            for (int i = 0; i < listLength; i++)
+                            {
+                                byte[,] redBlock = FinalMatrixRED[i];
+                                byte[,] greenBlock = FinalMatrixGREEN[i];
+                                byte[,] blueBlock = FinalMatrixBLUE[i];
+
+                                byte[,] resultBlock = new byte[blockSize, blockSize];
+
+                                for (int x = 0; x < blockSize; x++)
+                                {
+                                    for (int y = 0; y < blockSize; y++)
+                                    {
+                                        resultBlock[x, y] = (byte)(redBlock[x, y] | greenBlock[x, y] | blueBlock[x, y]);
+                                    }
+                                }
+
+                                FinalResults.Add(resultBlock);
                             }
                         }
                     }
@@ -405,6 +452,23 @@ namespace CriminisiDetectionAlgorithm
         private void textBox6_TextChanged(object sender, EventArgs e)
         {
 
+        }
+
+        private void textBox7_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private bool isANDChecked = false;
+        private void checkBox3_CheckedChanged(object sender, EventArgs e)
+        {
+            isANDChecked = checkBox3.Checked;
+        }
+
+        private bool isORChecked = false;
+        private void checkBox4_CheckedChanged(object sender, EventArgs e)
+        {
+            isORChecked = checkBox4.Checked;
         }
     }
 }
